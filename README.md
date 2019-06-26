@@ -61,4 +61,4 @@ The hardware resources are allocated as following table.
 * Makefile
   ```$makefile```
 ## Demo video
-{%youtube FNsj988beX8 %}
+www.youtube.com/FNsj988beX8
