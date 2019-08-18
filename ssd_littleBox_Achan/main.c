@@ -1,20 +1,15 @@
 /* ------------------------------------------
  * Copyright (c) 2017, Synopsys, Inc. All rights reserved.
-
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
-
  * 1) Redistributions of source code must retain the above copyright notice, this
  * list of conditions and the following disclaimer.
-
  * 2) Redistributions in binary form must reproduce the above copyright notice,
  * this list of conditions and the following disclaimer in the documentation and/or
  * other materials provided with the distribution.
-
  * 3) Neither the name of the Synopsys, Inc., nor the names of its contributors may
  * be used to endorse or promote products derived from this software without
  * specific prior written permission.
-
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -71,6 +66,8 @@
 #include "u8g.h"
 
 #define IOTDK_WIND_ID DFSS_GPIO_8B3_ID
+#define IOTDK_LED_ID		DFSS_GPIO_4B2_ID
+#define IOTDK_LED_PIN		0
 
 /* For ssd calculation */
 float ssd;
@@ -82,18 +79,8 @@ char buf[32];
 char buf_transform[32];
 float tem;
 float hum;
+float windSpeed;
 int32_t test;
-
-/*For wind sensor */
-const float zeroWindAdjustment =  0.2; 
-uint32_t TMP_Therm_ADunits;  
-uint32_t RV_Wind_ADunits;   
-float RV_Wind_Volts;
-unsigned long lastMillis;
-float TempCtimes100;
-float zeroWind_ADunits;
-float zeroWind_volts;
-float WindSpeed_MPH;
 
 u8g_t u8g;
 DEV_UART* uart2;
@@ -196,23 +183,17 @@ void draw(void) {
 /** main entry for running ntshell */
 int main(void)
 {
-	DEV_GPIO* RV_Pin;
-	//DEV_GPIO_PTR TMP_Pin;
+	DEV_GPIO_PTR gpio_fan;
 
-	io_arduino_config(ARDUINO_PIN_AD0, ARDUINO_ADC, IO_PINMUX_ENABLE);
-	io_arduino_config(ARDUINO_PIN_AD1, ARDUINO_ADC, IO_PINMUX_ENABLE);
-	
-	RV_Pin = gpio_get_dev(IOTDK_WIND_ID);
-	//TMP_Pin = gpio_get_dev(IOTDK_WIND_ID);
-	if(RV_Pin->gpio_open((1 << 7)) == E_OK){
-		RV_Pin->gpio_control(GPIO_CMD_SET_BIT_DIR_INPUT,(void *)(1 << 7));
-		EMBARC_PRINTF("OOpen,A0!\r\n");
+	io_arduino_config(ARDUINO_PIN_0, ARDUINO_GPIO, IO_PINMUX_ENABLE);
+
+	gpio_fan = gpio_get_dev(IOTDK_LED_ID);
+
+	if (gpio_fan->gpio_open((1 << IOTDK_LED_PIN)) == E_OPNED)
+	{
+		gpio_fan->gpio_control(GPIO_CMD_SET_BIT_DIR_OUTPUT,
+								(void *)(1 << IOTDK_LED_PIN));
 	}
-	if(RV_Pin->gpio_open((1 << 6)) == E_OPNED){
-		RV_Pin->gpio_control(GPIO_CMD_SET_BIT_DIR_INPUT,(void *)(1 << 6));
-		EMBARC_PRINTF("Open,A1!\r\n");
-	}
-	
 	
 	uart2 = uart_get_dev(DFSS_UART_1_ID);	//Open UART1 transmition
 	if(uart2->uart_open(9600) == E_OK){
@@ -227,27 +208,14 @@ int main(void)
 
 	u8g_Begin(&u8g); /* reset display and put it into default state */
 	
-	if(RV_Pin->gpio_read(&TMP_Therm_ADunits, 1<<7) == E_OK){
-			
-		printf("Success1\n");
-	}
-	if(RV_Pin->gpio_read(&RV_Wind_ADunits, 1<<6) == E_OK){
-		printf("Success2\n");
-	}
-   	RV_Wind_Volts = ((float)RV_Wind_ADunits *  0.0048828125);
 
-	TempCtimes100 = (0.005 *((float)TMP_Therm_ADunits * (float)TMP_Therm_ADunits)) - (16.862 * (float)TMP_Therm_ADunits) + 9075.4;  
-
-	zeroWind_ADunits = -0.0006*((float)TMP_Therm_ADunits * (float)TMP_Therm_ADunits) + 1.0727 * (float)TMP_Therm_ADunits + 47.172;  //  13.0C  553  482.39
-
-	zeroWind_volts = (zeroWind_ADunits * 0.0048828125) - zeroWindAdjustment;  
-
-	WindSpeed_MPH =  pow(((RV_Wind_Volts - zeroWind_volts) /0.2300) , 2.7265); 
 
 	while(1) {
-		//printf("%f\n",WindSpeed_MPH);
-		//printf("%d\n",RV_Wind_ADunits );
-		for(int i = 0;i < 6;i++){						//Read temperature from ESP8266
+		
+		char buf[32];
+		char buf_transform[32];
+
+		for(int i = 0;i < 3;i++){						//Read temperature from ESP8266
 			test = uart2->uart_read(&data,1);
 			buf[i] = data;
 		}
@@ -256,30 +224,10 @@ int main(void)
 		if(buf[0] == '|'){
 			for(int i = 0;i < 2; i++)
 				buf_transform[i] = buf[i+1];
-			tem = atof(buf_transform);
-		}
-		else if(buf[0] == '#'){
-			for(int i = 0;i < 2; i++)
-				buf_transform[i] = buf[i+1];
-			hum = atof(buf_transform);
+			ssd = atof(buf_transform);
 		}
 
-		if(buf[3] == '|'){
-			for(int i = 0;i < 2; i++)
-				buf_transform[i] = buf[i+4];
-			tem = atof(buf_transform);
-		}
-		else if(buf[3] == '#'){
-			for(int i = 0;i < 2; i++)
-				buf_transform[i] = buf[i+4];
-			hum = atof(buf_transform);
-		}
-		/*================================================================================= */
-
-		//printf("Current temperature : %f, Current humidity : %f, Current wind speed : %f\n",tem,hum,WindSpeed_MPH);
-
-		ssd = (1.818 * tem + 18.18) * (0.88 + 0.002 * hum) + (tem - 32)/(45 - tem) - 3.2 * WindSpeed_MPH + 18.2;
-		//printf("Current ssd : %f\n\n",ssd);
+		printf("Current ssd : %f\n\n",ssd);
 
 		if(ssd < 25){
 			draw_state = 1;
@@ -314,9 +262,14 @@ int main(void)
 		do {
 			draw();
 		} while (u8g_NextPage(&u8g)); /* marks the end of the body of the picture loop */
-		//board_delay_ms(1000, 1);
-	}
 
+		if(draw_state > 5)
+			gpio_fan->gpio_write(1, 1 << IOTDK_LED_PIN);
+		else
+			gpio_fan->gpio_write(0, 1 << IOTDK_LED_PIN);
+		
+	}
+	
 	return E_SYS;
 }
 
