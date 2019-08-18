@@ -1,6 +1,7 @@
 # Synopsys ARC盃競賽 
 室內舒適度小盒子 -- A醬
 
+[TOC]
 ## Introduction
 * 夏季將近，為了消暑，不論在家裡、工作場所，我們總是離不開冷氣房。這樣不僅浪費電力，也容易造成感冒。在這**環保節能**意識抬頭的情景下，我們除了購買較節能的家電外，是否還有其他方式能更加節省能源呢？
 * 丹麥學者P.O. Fanger教授於1972年所發表**人體熱平衡模型**，該模型用來表示人體對於環境中冷、熱的感受。該模型提出，除了溫度，濕度、風速等因素也影響人體對環境舒適度感受。
@@ -19,19 +20,23 @@
 
 ## Hardware & Software
 ### Hardware connection
-![](https://i.imgur.com/7jLGut2.jpg)
+![](https://i.imgur.com/wbn2ML9.jpg)
 
-| Embarc | Esp8266 | OLED 128x64 | WindSpeed | DHT11 |
-| -------- | -------- | -------- | -------- | -------- |
+
+
+| Embarc | Esp8266 | OLED 128x64 | WindSpeed | DHT11 | Relay |
+| -------- | -------- | -------- | -------- | -------- | -------- |
 | PMode (UART1) | TX / RX |  |  |  |
 | I2C0 - SCL |  | SCL |  |  |
 | I2C0 - SDA |  | SCA |  |  |
-| Arduino Extension A0 |  |  | TMP |  |
-| Arduino Extension A1 |  |  | RV |  |
+| IO0 |  | |  |  | IN |
 |  | D2 |  |  | Data |
 
 ### Software structure
-![](https://i.imgur.com/hMVhju3.png)
+![](https://i.imgur.com/M2f3k4b.png)
+
+
+
 
 
 ## User manual
@@ -61,4 +66,4 @@ The hardware resources are allocated as following table.
 * Makefile
   ```$makefile```
 ## Demo video
-https://youtu.be/GxS7WVDngEM
+{%youtube C24F_YsFLII %}
